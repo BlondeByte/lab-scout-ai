@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LabScout — Arxiv Prospect Intelligence</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap');
+
+:root {
+  --bg: #0d0f0e;
+  --surface: #141716;
+  --surface2: #1a1d1b;
+  --border: #252a27;
+  --accent: #a8e063;
+  --accent2: #56ab2f;
+  --text: #e8ede9;
+  --text-dim: #7a8a7d;
+  --text-faint: #3d4d3f;
+  --red: #e05252;
+  --yellow: #e0c452;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  min-height: 100vh;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Subtle grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(168,224,99,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,224,99,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header */
+.header {
+  margin-bottom: 48px;
+  animation: fadeUp 0.6s ease both;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.logo-mark {
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--accent);
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(168,224,99,0.15), transparent);
+}
+
+.logo-name {
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.logo-name span {
+  color: var(--accent);
+}
+
+.tagline {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-left: 48px;
+}
+
+/* API Key section */
+.api-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  animation: fadeUp 0.6s ease 0.1s both;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.api-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.api-input-wrap {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+
+.api-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.api-input:focus { border-color: var(--accent); }
+.api-input::placeholder { color: var(--text-faint); }
+
+.api-status {
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.api-status.set { background: rgba(168,224,99,0.1); color: var(--accent); border: 1px solid rgba(168,224,99,0.2); }
+.api-status.unset { background: rgba(224,82,82,0.1); color: var(--red); border: 1px solid rgba(224,82,82,0.2); }
+
+/* Main card */
+.main-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  animation: fadeUp 0.6s ease 0.2s both;
+  margin-bottom: 24px;
+}
+
+.card-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.step-badge {
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.card-body { padding: 24px; }
+
+textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  resize: vertical;
+  min-height: 180px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+textarea:focus { border-color: var(--accent); }
+textarea::placeholder { color: var(--text-faint); font-style: italic; }
+
+.input-hint {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-faint);
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hint-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hint-tag::before {
+  content: '→';
+  color: var(--accent);
+  font-size: 10px;
+}
+
+/* Analyze button */
+.btn-analyze {
+  width: 100%;
+  background: var(--accent);
+  color: #0d0f0e;
+  border: none;
+  border-radius: 10px;
+  padding: 16px 24px;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-analyze:hover { background: #bef07a; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(168,224,99,0.2); }
+.btn-analyze:active { transform: translateY(0); }
+.btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* Loading */
+.loading-bar {
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 16px 0 0;
+  overflow: hidden;
+  display: none;
+}
+
+.loading-bar.active { display: block; }
+
+.loading-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  border-radius: 2px;
+  animation: loadingSlide 1.8s ease-in-out infinite;
+}
+
+@keyframes loadingSlide {
+  0% { width: 0%; margin-left: 0; }
+  50% { width: 60%; margin-left: 20%; }
+  100% { width: 0%; margin-left: 100%; }
+}
+
+.loading-text {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-top: 8px;
+  display: none;
+  animation: pulse 1.5s ease infinite;
+}
+
+.loading-text.active { display: block; }
+
+@keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+/* Results */
+.results {
+  display: none;
+  animation: fadeUp 0.5s ease both;
+}
+
+.results.visible { display: block; }
+
+.result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) { .result-grid { grid-template-columns: 1fr; } }
+
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.2s;
+}
+
+.result-card:hover { border-color: var(--text-faint); }
+
+.result-card.full { grid-column: 1 / -1; }
+
+.result-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.result-label .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.result-value {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.result-value.mono {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+}
+
+.result-value.small {
+  font-size: 14px;
+  font-family: 'DM Mono', monospace;
+  font-weight: 300;
+  line-height: 1.7;
+  color: #c8d8ca;
+}
+
+/* ICP Score */
+.icp-score-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.icp-score-number {
+  font-family: 'Fraunces', serif;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.icp-score-number.high { color: var(--accent); }
+.icp-score-number.mid { color: var(--yellow); }
+.icp-score-number.low { color: var(--red); }
+
+.icp-score-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  padding-bottom: 6px;
+}
+
+.icp-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.icp-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1s ease;
+}
+
+.icp-bar-fill.high { background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+.icp-bar-fill.mid { background: linear-gradient(90deg, #b8960c, var(--yellow)); }
+.icp-bar-fill.low { background: linear-gradient(90deg, #9b2222, var(--red)); }
+
+.icp-reason {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-top: 8px;
+}
+
+/* Outreach */
+.outreach-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #c8d8ca;
+  white-space: pre-wrap;
+  font-family: 'DM Mono', monospace;
+  position: relative;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--border);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover { background: var(--accent); color: #0d0f0e; }
+
+/* Authors list */
+.author-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.author-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Tags */
+.topic-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.topic-tag {
+  background: rgba(168,224,99,0.08);
+  border: 1px solid rgba(168,224,99,0.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+}
+
+/* Error */
+.error-box {
+  background: rgba(224,82,82,0.08);
+  border: 1px solid rgba(224,82,82,0.2);
+  border-radius: 10px;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--red);
+  display: none;
+  margin-top: 16px;
+}
+
+.error-box.visible { display: block; }
+
+/* Reset btn */
+.btn-reset {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: var(--text-dim);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+  margin-top: 16px;
+}
+
+.btn-reset:hover { border-color: var(--text-dim); color: var(--text); }
+
+/* Footer */
+.footer {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 1px;
+  margin-top: 48px;
+  animation: fadeUp 0.6s ease 0.4s both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 24px 0;
+}
+
+.section-label {
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 16px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark">⌖</div>
+      <div class="logo-name">Lab<span>Scout</span></div>
+    </div>
+    <div class="tagline">Arxiv → Prospect Intelligence</div>
+  </div>
+
+  <!-- API Key -->
+  <div class="api-section">
+    <div class="api-label">Anthropic API Key</div>
+    <div class="api-input-wrap">
+      <input type="password" class="api-input" id="apiKey" placeholder="sk-ant-..." oninput="updateApiStatus()" />
+    </div>
+    <div class="api-status unset" id="apiStatus">not set</div>
+  </div>
+
+  <!-- Input -->
+  <div class="main-card">
+    <div class="card-header">
+      <div class="card-title">Paper Input</div>
+      <div class="step-badge">paste abstract or full text</div>
+    </div>
+    <div class="card-body">
+      <textarea id="paperInput" placeholder="Paste an Arxiv paper abstract, title, or full text here...
+
+Example: 'We present ScaleQA, a new benchmark for evaluating large language models on scientific reasoning tasks. Authors: Chen et al., Stanford HAI, 2024. We introduce a dataset of 12,000 expert-annotated questions across...'"></textarea>
+      <div class="input-hint">
+        <div class="hint-tag">Abstract works great</div>
+        <div class="hint-tag">Include author names if available</div>
+        <div class="hint-tag">Arxiv URL text also works</div>
+      </div>
+      <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
+        <span id="btnText">⌖ Scout This Paper</span>
+      </button>
+      <div class="loading-bar" id="loadingBar"><div class="loading-bar-fill"></div></div>
+      <div class="loading-text" id="loadingText">extracting signals...</div>
+      <div class="error-box" id="errorBox"></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="section-label">Intelligence Report</div>
+
+    <div class="result-grid">
+
+      <!-- Lab -->
+      <div class="result-card">
+        <div class="result-label"><div class="dot"></div>Lab / Institution</div>
+        <div class="result-value" id="resLab">—</div>
+      </div>
+
+      <!-- Authors -->
+      <div class="result-card">
+        <div class="result-label"><div class="dot"></div>Authors</div>
+        <div class="author-chips" id="resAuthors"></div>
+      </div>
+
+      <!-- Research Focus -->
+      <div class="result-card full">
+        <div class="result-label"><div class="dot"></div>Research Focus</div>
+        <div class="result-value small" id="resFocus">—</div>
+        <div class="topic-tags" id="resTags"></div>
+      </div>
+
+      <!-- ICP Score -->
+      <div class="result-card">
+        <div class="result-label"><div class="dot"></div>Prolific ICP Score</div>
+        <div class="icp-score-wrap">
+          <div class="icp-score-number" id="resScore">—</div>
+          <div class="icp-score-label">/ 100</div>
+        </div>
+        <div class="icp-bar"><div class="icp-bar-fill" id="resScoreBar" style="width:0%"></div></div>
+        <div class="icp-reason" id="resScoreReason">—</div>
+      </div>
+
+      <!-- Why they need Prolific -->
+      <div class="result-card">
+        <div class="result-label"><div class="dot"></div>Why They Need Prolific</div>
+        <div class="result-value small" id="resWhy">—</div>
+      </div>
+
+      <!-- Outreach angle -->
+      <div class="result-card full">
+        <div class="result-label"><div class="dot"></div>Outreach Angle</div>
+        <div style="position:relative">
+          <div class="outreach-box" id="resOutreach">—</div>
+          <button class="copy-btn" onclick="copyOutreach()">copy</button>
+        </div>
+      </div>
+
+    </div>
+
+    <button class="btn-reset" onclick="reset()">← analyze another paper</button>
+  </div>
+
+  <div class="footer">labscout · arxiv prospect intelligence · built for gtm teams targeting ai labs</div>
+
+</div>
+
+<script>
+function updateApiStatus() {
+  const key = document.getElementById('apiKey').value.trim();
+  const status = document.getElementById('apiStatus');
+  if (key.startsWith('sk-ant-') && key.length > 20) {
+    status.textContent = 'ready';
+    status.className = 'api-status set';
+  } else {
+    status.textContent = 'not set';
+    status.className = 'api-status unset';
+  }
+}
+
+function setLoading(active, message = 'extracting signals...') {
+  const btn = document.getElementById('analyzeBtn');
+  const bar = document.getElementById('loadingBar');
+  const text = document.getElementById('loadingText');
+  const btnText = document.getElementById('btnText');
+
+  if (active) {
+    btn.disabled = true;
+    btnText.textContent = '⌖ Scouting...';
+    bar.classList.add('active');
+    text.classList.add('active');
+    text.textContent = message;
+  } else {
+    btn.disabled = false;
+    btnText.textContent = '⌖ Scout This Paper';
+    bar.classList.remove('active');
+    text.classList.remove('active');
+  }
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = msg;
+  box.classList.add('visible');
+}
+
+function hideError() {
+  document.getElementById('errorBox').classList.remove('visible');
+}
+
+async function analyze() {
+  const key = document.getElementById('apiKey').value.trim();
+  const paper = document.getElementById('paperInput').value.trim();
+
+  hideError();
+
+  if (!key.startsWith('sk-ant-')) {
+    showError('Please enter a valid Anthropic API key (starts with sk-ant-)');
+    return;
+  }
+  if (!paper || paper.length < 50) {
+    showError('Please paste some paper content — at least an abstract.');
+    return;
+  }
+
+  setLoading(true, 'extracting signals...');
+
+  const prompt = `You are a GTM intelligence analyst. Analyze this Arxiv paper and extract prospect intelligence for Prolific (a human data platform used by AI labs for research studies and data labeling).
+
+PAPER TEXT:
+${paper}
+
+Return ONLY a JSON object with these exact fields:
+{
+  "lab": "Primary institution/lab name (e.g. Stanford HAI, DeepMind, MIT CSAIL)",
+  "authors": ["Author 1", "Author 2", "Author 3"],
+  "focus": "2-3 sentence summary of what this research is about and what problem it solves",
+  "tags": ["tag1", "tag2", "tag3", "tag4"],
+  "icp_score": 85,
+  "icp_reason": "2 sentences explaining why this lab is or isn't a strong ICP fit for Prolific. Consider: do they need human-annotated data? human participant studies? behavioral research? alignment/RLHF work?",
+  "why_prolific": "1-2 sentences on the specific data or study need this lab likely has that Prolific solves",
+  "outreach": "A 3-4 sentence personalized cold outreach message to this lab. Reference their specific research. Position Prolific as the infrastructure for their human data needs. Be technical and credible, not salesy. Sign off as a Prolific Growth team member."
+}
+
+ICP scoring guide:
+- 90-100: Does RLHF, alignment, human feedback, annotation, behavioral studies
+- 70-89: NLP/LLM work that likely needs human eval or annotation
+- 50-69: AI/ML research that could benefit from human data
+- 20-49: Technical AI work with limited human data needs
+- 0-19: Pure theory, hardware, infrastructure — low fit
+
+Return ONLY the JSON. No markdown, no explanation.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || `API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    let raw = data.content[0].text.trim();
+    if (raw.startsWith('```')) {
+      raw = raw.split('```')[1];
+      if (raw.startsWith('json')) raw = raw.slice(4);
+      raw = raw.trim();
+    }
+
+    const result = JSON.parse(raw);
+    renderResults(result);
+
+  } catch (err) {
+    showError('Error: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderResults(r) {
+  // Lab
+  document.getElementById('resLab').textContent = r.lab || '—';
+
+  // Authors
+  const authorWrap = document.getElementById('resAuthors');
+  authorWrap.innerHTML = '';
+  (r.authors || []).slice(0, 5).forEach(a => {
+    const chip = document.createElement('div');
+    chip.className = 'author-chip';
+    chip.textContent = a;
+    authorWrap.appendChild(chip);
+  });
+
+  // Focus
+  document.getElementById('resFocus').textContent = r.focus || '—';
+
+  // Tags
+  const tagWrap = document.getElementById('resTags');
+  tagWrap.innerHTML = '';
+  (r.tags || []).forEach(t => {
+    const tag = document.createElement('div');
+    tag.className = 'topic-tag';
+    tag.textContent = t;
+    tagWrap.appendChild(tag);
+  });
+
+  // ICP Score
+  const score = parseInt(r.icp_score) || 0;
+  const scoreEl = document.getElementById('resScore');
+  const barEl = document.getElementById('resScoreBar');
+  scoreEl.textContent = score;
+
+  const tier = score >= 70 ? 'high' : score >= 40 ? 'mid' : 'low';
+  scoreEl.className = `icp-score-number ${tier}`;
+  barEl.className = `icp-bar-fill ${tier}`;
+  setTimeout(() => { barEl.style.width = score + '%'; }, 100);
+
+  document.getElementById('resScoreReason').textContent = r.icp_reason || '—';
+
+  // Why Prolific
+  document.getElementById('resWhy').textContent = r.why_prolific || '—';
+
+  // Outreach
+  document.getElementById('resOutreach').textContent = r.outreach || '—';
+
+  // Show results
+  document.getElementById('results').classList.add('visible');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function copyOutreach() {
+  const text = document.getElementById('resOutreach').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1800);
+  });
+}
+
+function reset() {
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('paperInput').value = '';
+  hideError();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
