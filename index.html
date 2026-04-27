@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LabScout — Arxiv Prospect Intelligence</title>
+<title>LabScout – AI Research Prospect Intelligence</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap');
 
@@ -574,13 +574,13 @@ textarea::placeholder { color: var(--text-faint); font-style: italic; }
       <div class="step-badge">paste abstract or full text</div>
     </div>
     <div class="card-body">
-      <textarea id="paperInput" placeholder="Paste an Arxiv paper abstract, title, or full text here...
+      placeholder="Paste a research paper abstract, title, or full text here.
 
 Example: 'We present ScaleQA, a new benchmark for evaluating large language models on scientific reasoning tasks. Authors: Chen et al., Stanford HAI, 2024. We introduce a dataset of 12,000 expert-annotated questions across...'"></textarea>
       <div class="input-hint">
         <div class="hint-tag">Abstract works great</div>
         <div class="hint-tag">Include author names if available</div>
-        <div class="hint-tag">Arxiv URL text also works</div>
+        <div class="hint-tag">ArXiv, HuggingFace, or Semantic Scholar links work</div>
       </div>
       <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
         <span id="btnText">⌖ Scout This Paper</span>
@@ -647,7 +647,7 @@ Example: 'We present ScaleQA, a new benchmark for evaluating large language mode
     <button class="btn-reset" onclick="reset()">← analyze another paper</button>
   </div>
 
-  <div class="footer">labscout · arxiv prospect intelligence · built for gtm teams targeting ai labs</div>
+  labscout · ai research intelligence · built for gtm teams targeting ai labs
 
 </div>
 
@@ -711,8 +711,7 @@ async function analyze() {
 
   setLoading(true, 'extracting signals...');
 
-  const prompt = `You are a GTM intelligence analyst. Analyze this Arxiv paper and extract prospect intelligence for Prolific (a human data platform used by AI labs for research studies and data labeling).
-
+  You are a GTM intelligence analyst. Analyze this AI research paper and extract prospect intelligence for GTM teams targeting AI labs and research organizations.
 PAPER TEXT:
 ${paper}
 
