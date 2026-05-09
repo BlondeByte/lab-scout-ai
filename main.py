@@ -7,17 +7,20 @@ import os
 import time
 import json
 from collections import defaultdict
+from datetime import datetime, timezone, timedelta
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://labscoutai.com", "https://www.labscoutai.com"],
+    allow_origins=["https://labscoutai.com", "https://www.labscoutai.com", "https://marvelous-hotteok-56e32f.netlify.app"],
     allow_methods=["POST", "GET"],
     allow_headers=["Content-Type"],
 )
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 
 # Rate limiter: 10 requests per IP per hour
 rate_limit_store: dict = defaultdict(list)
@@ -35,7 +38,7 @@ def check_rate_limit(ip: str) -> bool:
 class ScoutRequest(BaseModel):
     paper_text: str
 
-PROMPT_TEMPLATE = """You are a GTM intelligence analyst. Analyze this AI/ML research paper and extract prospect intelligence for teams that provide human data, annotation, or participant research infrastructure.
+PROMPT_TEMPLATE = """You are a research intelligence analyst. Analyze this AI/ML research paper and extract intelligence for teams working at the intersection of human data and AI research.
 
 PAPER TEXT:
 {paper_text}
@@ -47,9 +50,9 @@ Return ONLY a JSON object with these exact fields:
   "focus": "2-3 sentence summary of what this research is about and what problem it solves",
   "tags": ["tag1", "tag2", "tag3", "tag4"],
   "signal_strength": 85,
-  "signal_reason": "2 sentences explaining the GTM signal strength. Does this lab need human-annotated data, participant studies, behavioral research, alignment/RLHF work, or human evaluation?",
+  "signal_reason": "2 sentences explaining the signal strength. Does this lab need human-annotated data, participant studies, behavioral research, alignment/RLHF work, or human evaluation?",
   "human_data_need": "1-2 sentences on the specific human data or study infrastructure need this research implies",
-  "outreach": "A 3-4 sentence personalized cold outreach message to this lab. Reference their specific research. Position human data infrastructure as the solution. Be technical and credible, not salesy."
+  "research": "2-3 sentences on the research context, collaboration potential, and why this work is significant in the broader AI landscape"
 }}
 
 Signal strength scoring:
@@ -107,6 +110,49 @@ async def scout(request: Request, body: ScoutRequest):
         raise HTTPException(status_code=502, detail="Failed to parse response.")
 
     return JSONResponse(content=result)
+
+@app.get("/stats")
+async def stats():
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        raise HTTPException(status_code=500, detail="Supabase not configured.")
+
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        headers = {
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        # Total papers this week
+        total_resp = await client.get(
+            f"{SUPABASE_URL}/rest/v1/items",
+            headers={**headers, "Prefer": "count=exact", "Range": "0-0"},
+            params={"created_at": f"gte.{week_ago}", "select": "id"},
+        )
+
+        # High signal this week (icp_score >= 70)
+        high_resp = await client.get(
+            f"{SUPABASE_URL}/rest/v1/items",
+            headers={**headers, "Prefer": "count=exact", "Range": "0-0"},
+            params={"created_at": f"gte.{week_ago}", "icp_score": "gte.70", "select": "id"},
+        )
+
+    def parse_count(resp):
+        cr = resp.headers.get("content-range", "0/0")
+        try:
+            return int(cr.split("/")[-1])
+        except Exception:
+            return 0
+
+    total = parse_count(total_resp)
+    high_signal = parse_count(high_resp)
+
+    return JSONResponse(content={
+        "papers_this_week": total,
+        "high_signal": high_signal,
+    })
 
 @app.get("/health")
 async def health():
