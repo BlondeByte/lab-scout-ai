@@ -22,6 +22,7 @@ app.add_middleware(
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
+VOYAGE_API_KEY = os.environ.get("VOYAGE_API_KEY")
 
 # Rate limiter: 10 requests per IP per hour
 rate_limit_store: dict = defaultdict(list)
@@ -38,6 +39,10 @@ def check_rate_limit(ip: str) -> bool:
 
 class ScoutRequest(BaseModel):
     paper_text: str
+
+class QueryRequest(BaseModel):
+    query: str
+    limit: int = 5
 
 PROMPT_TEMPLATE = """You are a research intelligence analyst. Analyze this AI/ML research paper and extract intelligence for teams working at the intersection of human data and AI research.
 
@@ -64,6 +69,23 @@ Signal strength scoring:
 - 0-19: Pure theory, hardware, infrastructure
 
 Return ONLY valid JSON. No markdown, no explanation."""
+
+async def get_embedding(text: str) -> list:
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
+            "https://api.voyageai.com/v1/embeddings",
+            headers={
+                "Authorization": f"Bearer {VOYAGE_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "voyage-3.5",
+                "input": text,
+            },
+        )
+    if response.status_code != 200:
+        raise HTTPException(status_code=502, detail="Embedding service error.")
+    return response.json()["data"][0]["embedding"]
 
 @app.post("/scout")
 async def scout(request: Request, body: ScoutRequest):
@@ -112,6 +134,44 @@ async def scout(request: Request, body: ScoutRequest):
 
     return JSONResponse(content=result)
 
+@app.post("/query")
+async def query(request: Request, body: QueryRequest):
+    ip = request.client.host
+
+    if not check_rate_limit(ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded.")
+
+    if not body.query or len(body.query.strip()) < 3:
+        raise HTTPException(status_code=400, detail="Query too short.")
+
+    if not VOYAGE_API_KEY or not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        raise HTTPException(status_code=500, detail="Service not configured.")
+
+    # Embed the query
+    embedding = await get_embedding(body.query)
+
+    # Search Supabase via pgvector
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
+            f"{SUPABASE_URL}/rest/v1/rpc/match_items",
+            headers={
+                "apikey": SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "query_embedding": embedding,
+                "match_threshold": 0.5,
+                "match_count": body.limit,
+            },
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=502, detail="Search failed.")
+
+    results = response.json()
+    return JSONResponse(content={"results": results})
+
 @app.get("/stats")
 async def stats():
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
@@ -126,14 +186,12 @@ async def stats():
             "Content-Type": "application/json",
         }
 
-        # Total papers this week
         total_resp = await client.get(
             f"{SUPABASE_URL}/rest/v1/items",
             headers={**headers, "Prefer": "count=exact", "Range": "0-0"},
             params={"created_at": f"gte.{week_ago}", "select": "id"},
         )
 
-        # High signal this week (icp_score >= 70)
         high_resp = await client.get(
             f"{SUPABASE_URL}/rest/v1/items",
             headers={**headers, "Prefer": "count=exact", "Range": "0-0"},
